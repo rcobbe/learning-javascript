@@ -1,5 +1,9 @@
 #lang racket
 
+;; Reference implementation, so I can check that the definition of the machine
+;; has the desired properties, and provide a basis for testing the eventual
+;; Javascript implementation.
+
 ;; Env ::= Hash from Sym to Addr
 
 ;; Addr = (addr N)
