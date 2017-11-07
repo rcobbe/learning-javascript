@@ -1,0 +1,109 @@
+e := n
+   | str
+   | sym
+   | null
+   | #t
+   | #f
+   | prim
+   | x
+   | (λ (x ...) e)
+   | (e ...+)
+   | (letrec ([x e] ...+) e)
+   | (call/cc e)
+   | (set! x e)
+   | (if e e e)
+   | (begin e ...+)
+
+CESK machine:
+
+v := n
+   | str
+   | sym
+   | null
+   | pair(a, a)
+   | #t
+   | #f
+   | void
+   | prim
+   | closure(ρ, <x ...>, e)
+   | continuation(κ)
+
+κ ::= halt
+    | ratorK(<e ...>, ρ, κ)
+    | randK(clo(ρ, <x ...>, e), ρ, <e ...>, <v ...>, κ)
+    | contArgK(continuation(κ))
+    | primK(prim, ρ, <e ...>, <v ...>, κ)
+    | callccK(κ)
+    | setK(a, κ)
+    | ifK(e, e, ρ, κ)
+    | beginK(<e ...>, ρ, κ)
+    | letrecK(x0, [x e] ..., e_b, ρ, κ)
+
+XXX LETREC
+
+ρ :: Var -> Addr
+σ :: Addr -> Value
+
+{n, ρ, σ, κ} -> ApplyKont(κ, n)
+similar for str, sym, null, #f, #t, prim, void
+
+{x, ρ, σ, κ} -> ApplyKont(κ, σ(ρ(x)))
+{(λ (x ...) e), ρ, σ, κ} -> ApplyKont(κ, closure(ρ, <x ...>, e))
+{(e0 e ...), ρ, σ, κ} -> {e0, ρ, σ, ratorK(<e ...>, ρ, κ)}
+{(letrec ([x0 e0] [x e] ...) e_b), ρ, σ, κ} ->
+  {e0, ρ', σ', letrecK(x0, [x e] ..., e_b, ρ', κ)}
+    where ρ' = ρ[x0 -> a0, x -> a ...],
+          σ' = σ[a0 -> void, x -> void ...]
+          a0, a ... not in dom(σ)
+{(call/cc e), ρ, σ, κ} -> {e, ρ, σ, callccK(κ)}
+{(set! x e), ρ, σ, κ} -> {e, ρ, σ, setK(ρ(x), κ)}
+{(if e1 e2 e3), ρ, σ, κ} -> {e1, ρ, σ, ifK(e2, e3, ρ, κ)}
+{(begin e0 e ...), ρ, σ, κ} -> {e0, ρ, σ, beginK(<e ...>, ρ, κ)}
+
+ApplyKont(σ, halt, v): done
+
+ApplyKont(σ, ratorK(<>, ρ, κ), closure(ρ', <>, e_b)) = {e_b, ρ', σ, κ}
+
+ApplyKont(σ, ratorK(<e1 e ...>, ρ, κ), closure(ρ', <x ...>, e_b)) =
+  {e1, ρ, σ, randK(closure(ρ', <x ...>, e_b), ρ, <e ...>, <>, κ)}
+
+ApplyKont(σ, ratorK(<e>, ρ, κ), continuation(κ') =
+  {e, ρ, σ, contArgK(continuation(κ'))}
+
+ApplyKont(σ, randK(closure(ρ', <x ...>, e_b), ρ, <>, <v ...>, κ), v_n) =
+  {e_b, ρ[x -> a ...], σ[a -> w ...], κ}
+    where w ... = v ... v_n
+          a ... not in dom(σ)
+          length of <x ...> = length of <v ... v_n>
+
+ApplyKont(σ, randK(closure(ρ', <x ...>, e_b), ρ, <e0 e ...>, <v ...>, κ), v_n) =
+  {e0, ρ, σ, randK(closure(ρ', <x ...>, e_b), ρ, <e ...>, <v ... v_n>, κ)}
+
+ApplyKont(σ, contArg(κ), v) = ApplyKont(σ, κ, v)
+  XXX Do we need to use value configurations here to avoid the tail-call
+      to ApplyKont?  Can we even avoid the contArgK entirely and just use
+      the underlying continuation?  Work out some examples.
+
+ApplyKont(σ, primK(prim, ρ, <>, <v ...>, κ), v_n) =
+  ApplyKont(σ', κ, v)
+    where (σ', v) = ApplyPrim(prim, σ, <v ... v_n>)
+
+ApplyKont(σ, primK(prim, ρ, <e0 e ...>, <v ...>, κ), v_n) =
+  {e0, ρ, σ, primK(prim, ρ, <e ...>, <v ... v_n>, κ)}
+
+ApplyKont(σ, callccK(κ), closure(ρ', <x>, e_b)) =
+  {e_b, ρ'[x -> a], σ[a -> continuation(κ)], κ}
+
+ApplyKont(σ, setK(a, κ), v) =
+  ApplyKont(σ[a -> v], κ, void)
+
+ApplyKont(σ, ifK(e1, e2, ρ, κ), #t) = {e1, ρ, σ, κ}
+
+ApplyKont(σ, ifK(e1, e2, ρ, κ), #f) = {e2, ρ, σ, κ}
+
+ApplyKont(σ, beginK(<e0 e ...>, ρ, κ), v) = {e0, ρ, σ, κ}
+
+ApplyKont(σ, letrecK(x, empty, e_b, ρ, κ), v) = {e_b, ρ, σ[ρ(x) -> v], κ}
+
+ApplyKont(σ, letrecK(x0, [x1 e1] [x e] ..., e_b, ρ, κ), v) =
+  {e1, ρ, σ, letrecK(x1, [x e] ..., e_b, ρ, κ)}
