@@ -11,7 +11,6 @@
 ;; seem to be worth it.
 
 (provide Addr
-         next-addr
 
          Env
          empty-env
@@ -41,29 +40,38 @@
          Continuation
          )
 
+;; Represents an address in a Store
 (struct addr ([ptr : Natural]) #:transparent)
 (define-type Addr addr)
 
+;; Increment an address
 (: next-addr (Addr -> Addr))
 (define (next-addr a)
   (addr (add1 (addr-ptr a))))
 
+;; An environment mapping identifiers to addresses
 (struct env ([bindings : (Immutable-HashTable Symbol Addr)]) #:transparent)
 (define-type Env env)
 
+;; An environment with no bindings
 (: empty-env Env)
 (define empty-env (env (make-immutable-hash null)))
 
+;; Looks up a symbol in an environment.  Aborts if not found.
 (: lookup (Env Symbol -> Addr))
 (define (lookup ρ x)
   (hash-ref (env-bindings ρ) x
             (lambda ()
               (error 'lookup "identifier ~a not bound" x))))
 
+;; Extends an environment with a new binding, shadowing any existing binding.
 (: extend (Symbol Addr Env -> Env))
 (define (extend x a ρ)
   (env (hash-set (env-bindings ρ) x a)))
 
+;; Extend an environment with a sequence of bindings, shadowing as
+;; appropriate.  If the same symbol occurs multiple times in the argument, the
+;; binding to the right takes precedence.
 (: extend* ((Listof Symbol) (Listof Addr) Env -> Env))
 (define (extend* xs addrs ρ)
   (unless (same-length? xs addrs)
@@ -76,20 +84,24 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(struct store ([next : Addr]
+;; Store mapping addresses to values.
+(struct store ([next : Addr]  ;; next address to allocate
                [values : (Immutable-HashTable Addr Value)])
         #:transparent)
 (define-type Store store)
 
+;; Store with no contents
 (: empty-store Store)
 (define empty-store (store (addr 0) (make-immutable-hash null)))
 
+;; Allocate a new address, and initialize it to the specified value.
 (: alloc (Store Value -> (Values Store Addr)))
 (define (alloc σ val)
   (let ([a (store-next σ)])
     (values (store (next-addr a) (hash-set (store-values σ) a val))
             a)))
 
+;; Allocate space for multiple values; return addresses for each.
 (: alloc* (Store (Listof Value) -> (Values Store (Listof Addr))))
 (define (alloc* σ vals)
   (foldr2 (lambda ([val : Value]
@@ -101,12 +113,15 @@
           null
           vals))
 
+;; Look up the value at an address.  Signals an error if address is not
+;; allocated.
 (: deref (Store Addr -> Value))
 (define (deref σ a)
   (hash-ref (store-values σ) a
             (lambda ()
               (error 'deref "Bad address ~a" a))))
 
+;; Update the value at an address.  Aborts if address is not allocated.
 (: update (Store Addr Value -> Store))
 (define (update σ a v)
   (let ([t (store-values σ)])
@@ -158,6 +173,7 @@
 
 (define-type Continuation #f)
 
+;; Do two lists have the same length?  Linear in length of shorter list.
 (: same-length? (All (α β) (Listof α) (Listof β) -> Boolean))
 (define (same-length? xs ys)
   (if (null? xs)
@@ -165,6 +181,7 @@
       (and (not (null? ys))
            (same-length? (cdr xs) (cdr ys)))))
 
+;; Foldr for functions with 2 accumulators and thus 2 return values.
 (: foldr2 (All (α β γ) (γ α β -> (Values α β)) α β (Listof γ) -> (Values α β)))
 (define (foldr2 f accum1 accum2 xs)
   (if (null? xs)
