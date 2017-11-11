@@ -1,5 +1,15 @@
 #lang typed/racket
 
+;; Defines general types for reference implementation.  I'd have preferred to
+;; split this into separate modules, including at least one module each for
+;; env and store, but unfortunately the mutually-recursive nature of the types
+;; makes this impossible.  I'd tried to solve this by making the Store and Env
+;; types polymorphic, but the type system doesn't do what I need here; see the
+;; thread at
+;; <https://groups.google.com/forum/#!topic/racket-users/Ma9Fh72gfQg>.  In
+;; principle I could move Store out to a separate module, but it doesn't really
+;; seem to be worth it.
+
 (provide Addr
          next-addr
 
