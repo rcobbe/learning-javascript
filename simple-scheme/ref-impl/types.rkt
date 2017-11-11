@@ -131,6 +131,35 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
+;; Bindings
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Bind an identifier to a value; return updated env and store.
+(: bind (Symbol Value Env Store -> (Values Env Store)))
+(define (bind x val ρ σ)
+  (let-values ([(new-σ addr) (alloc σ val)])
+    (values (extend x addr) new-σ)))
+
+(: bind/p ((Pairof Symbol Value) Env Store -> (Values Env Store)))
+(define (bind/p symval ρ σ)
+  (bind (car symval) (cdr symbol) ρ σ))
+
+;; Binds multiple identifiers to values; returns updated env & store.  If a
+;; symbol appears multiple times, right-hand occurrence. takes precedence.
+(: bind* ((Listof Symbol) (Listof Value) Env Store) -> (Values Env Store))
+(define (bind* xs vals ρ σ)
+  (foldr2 bind/p ρ σ (zip xs vals)))
+
+(: zip (All (α β) (Listof α) (Listof β) -> (Listof (Pairof α β))))
+(define (zip xs ys)
+  (cond
+   [(and (null? xs) (null? ys)) null]
+   [(or (null? xs) (null? ys)) (error 'zip "lists of different length")]
+   [else (cons (cons (car xs) (car ys)) (zip (cdr xs) (cdr ys)))]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 ;; Values
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
