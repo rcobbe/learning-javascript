@@ -139,15 +139,15 @@
 (: bind (Symbol Value Env Store -> (Values Env Store)))
 (define (bind x val ρ σ)
   (let-values ([(new-σ addr) (alloc σ val)])
-    (values (extend x addr) new-σ)))
+    (values (extend x addr ρ) new-σ)))
 
 (: bind/p ((Pairof Symbol Value) Env Store -> (Values Env Store)))
 (define (bind/p symval ρ σ)
-  (bind (car symval) (cdr symbol) ρ σ))
+  (bind (car symval) (cdr symval) ρ σ))
 
 ;; Binds multiple identifiers to values; returns updated env & store.  If a
 ;; symbol appears multiple times, right-hand occurrence. takes precedence.
-(: bind* ((Listof Symbol) (Listof Value) Env Store) -> (Values Env Store))
+(: bind* ((Listof Symbol) (Listof Value) Env Store -> (Values Env Store)))
 (define (bind* xs vals ρ σ)
   (foldr2 bind/p ρ σ (zip xs vals)))
 
