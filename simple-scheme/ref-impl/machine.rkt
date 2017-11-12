@@ -38,12 +38,24 @@
       [(list 'lambda (list (? symbol? #{xs : (Listof Symbol)}) ...) body)
        (check-unique! xs)
        (value-config (closure-val ρ xs body) σ κ)]
+      [(list 'let (list (list (? symbol? #{xs : (Listof Symbol)})
+                              #{rhss : (Listof Sexp)}) ...)
+             body)
+       (check-unique! xs)
+       (expr-config `((lambda ,xs ,body) ,@rhss) ρ σ κ)]
+      [(list 'letrec _ ...)
+       (error 'step-expr "letrec unimplemented")]
+      [(list 'set! (? symbol? x) rhs)
+       (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
       [expr (error 'step-expr "unimplemented expression ~a" expr)])))
 
 (: step-value (value-config -> Config))
 (define (step-value config)
   (match config
-    [(value-config v _ (halt-k)) config]))
+    [(value-config v _ (halt-k)) config]
+    [(value-config v σ (set!-k addr κ))
+     (value-config (void) (update σ addr v) κ)]
+    [else (error 'step-value "unknown configuration ~a" config)]))
 
 (: call/cc-impl ((Listof Value) Store Continuation -> Config))
 (define (call/cc-impl args σ κ)
