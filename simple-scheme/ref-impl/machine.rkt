@@ -15,9 +15,9 @@
                       [κ : Continuation])
         #:transparent)
 
-;; To simplify step's return type, I've implemented it so a value configuration
-;; with the `halt' continuation simply maps to itself; we leave it to the
-;; caller to detect termination.
+;; To simplify step's return type, a value configuration with the `halt'
+;; continuation simply maps to itself; we leave it to the caller to detect
+;; termination.
 (: step (Config -> Config))
 (define (step config)
   (if (expr-config? config)
@@ -26,11 +26,24 @@
 
 (: step-expr (expr-config -> Config))
 (define (step-expr config)
-  (error 'step-expr "unimplemented"))
+  (let ([ρ (expr-config-ρ config)]
+        [σ (expr-config-σ config)]
+        [κ (expr-config-κ config)])
+    (match (expr-config-expr config)
+      [(? number? n) (value-config n σ κ)]
+      [(? string? s) (value-config s σ κ)]
+      [(list 'quote (? symbol? s)) (value-config s σ κ)]
+      [(? boolean? b) (value-config b σ κ)]
+      [(? symbol? x) (value-config (deref σ (lookup ρ x)) σ κ)]
+      [(list 'lambda (list (? symbol? #{xs : (Listof Symbol)}) ...) body)
+       (check-unique! xs)
+       (value-config (closure-val ρ xs body) σ κ)]
+      [expr (error 'step-expr "unimplemented expression ~a" expr)])))
 
 (: step-value (value-config -> Config))
 (define (step-value config)
-  (error 'step-value "unimplemented"))
+  (match config
+    [(value-config v _ (halt-k)) config]))
 
 (: call/cc-impl ((Listof Value) Store Continuation -> Config))
 (define (call/cc-impl args σ κ)
@@ -54,6 +67,16 @@
 (: apply-closure (closure-val (Listof Value) Store Continuation -> Config))
 (define (apply-closure closure arg-vals σ κ)
   (error 'apply-closure "Unimplemented"))
+
+;; Ensures that all symbols in the list are unique; signasl error otherwise.
+(: check-unique! ((Listof Symbol) -> Any))
+(define (check-unique! xs)
+  (foldl (lambda ([x : Symbol] [accum : (Setof Symbol)]) : (Setof Symbol)
+           (if (set-member? accum x)
+               (error 'check-unique "duplicate symbol: ~a" x)
+               (set-add accum x)))
+         ((inst list->seteq Symbol) null)
+         xs))
 
 (: length=? (All (α) (Listof α) Natural -> Boolean))
 (define (length=? xs n)
