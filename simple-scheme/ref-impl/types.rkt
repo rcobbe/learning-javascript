@@ -39,6 +39,7 @@
 
          Continuation
          (struct-out halt-k)
+         (struct-out set!-k)
          )
 
 ;; Represents an address in a Store
@@ -201,8 +202,9 @@
 ;;        | (Expr ...+)
 ;; null, void, call/cc are constants.
 
-(define-type Continuation #f)
+(define-type Continuation (U halt-k set!-k))
 (struct halt-k () #:transparent)
+(struct set!-k ([a : Addr] [κ : Continuation]) #:transparent)
 
 ;; Do two lists have the same length?  Linear in length of shorter list.
 (: same-length? (All (α β) (Listof α) (Listof β) -> Boolean))
