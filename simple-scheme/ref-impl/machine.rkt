@@ -47,6 +47,8 @@
        (error 'step-expr "letrec unimplemented")]
       [(list 'set! (? symbol? x) rhs)
        (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
+      [(list 'if #{e1 : Sexp} #{e2 : Sexp} #{e3 : Sexp})
+       (expr-config e1 ρ σ (if-k ρ e2 e3 κ))]
       [expr (error 'step-expr "unimplemented expression ~a" expr)])))
 
 (: step-value (value-config -> Config))
@@ -55,6 +57,8 @@
     [(value-config v _ (halt-k)) config]
     [(value-config v σ (set!-k addr κ))
      (value-config (void) (update σ addr v) κ)]
+    [(value-config test-value σ (if-k ρ e2 e3 κ))
+     (expr-config (if test-value e2 e3) ρ σ κ)]
     [else (error 'step-value "unknown configuration ~a" config)]))
 
 (: call/cc-impl ((Listof Value) Store Continuation -> Config))
