@@ -41,6 +41,7 @@
      (error 'call/cc-impl "expected 1 arg, a closure; got ~a" args)]))
 
 (: constants (Immutable-HashTable Symbol (U Value Const-Impl)))
+;; XXX probably want to make all constants Const-Impls
 (define constants
   ((inst make-immutable-hasheq Symbol (U Value Const-Impl))
     (list (cons 'null null)
