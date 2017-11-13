@@ -15,6 +15,7 @@
          Env
          empty-env
          lookup
+         bound?
          extend
          extend*
 
@@ -66,6 +67,11 @@
   (hash-ref (env-bindings ρ) x
             (lambda ()
               (error 'lookup "identifier ~a not bound" x))))
+
+;; Does the environment contain a binding for the symbol?
+(: bound? (Env Symbol -> Boolean))
+(define (bound? ρ x)
+  (hash-has-key? (env-bindings ρ) x))
 
 ;; Extends an environment with a new binding, shadowing any existing binding.
 (: extend (Symbol Addr Env -> Env))
