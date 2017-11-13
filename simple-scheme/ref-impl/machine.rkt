@@ -35,6 +35,8 @@
       [(list 'quote (? symbol? s)) (value-config s σ κ)]
       [(? boolean? b) (value-config b σ κ)]
       [(? symbol? x) (value-config (deref σ (lookup ρ x)) σ κ)]
+      ;; XXX symbol case needs to allow for constant references -- or,
+      ;; we prep initial environment.
       [(list 'lambda (list (? symbol? #{xs : (Listof Symbol)}) ...) body)
        (check-unique! xs)
        (value-config (closure-val ρ xs body) σ κ)]
