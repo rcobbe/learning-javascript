@@ -41,7 +41,7 @@
        (check-unique! xs)
        (value-config (closure-val ρ xs body) σ κ)]
       [(list 'let (list (list (? symbol? #{xs : (Listof Symbol)})
-                              #{rhss : (Listof Sexp)}) ...)
+                              #{rhss : (Listof Expr)}) ...)
              body)
        (check-unique! xs)
        (expr-config `((lambda ,xs ,body) ,@rhss) ρ σ κ)]
@@ -49,7 +49,7 @@
        (error 'step-expr "letrec unimplemented")]
       [(list 'set! (? symbol? x) rhs)
        (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
-      [(list 'if #{e1 : Sexp} #{e2 : Sexp} #{e3 : Sexp})
+      [(list 'if #{e1 : Expr} #{e2 : Expr} #{e3 : Expr})
        (expr-config e1 ρ σ (if-k ρ e2 e3 κ))]
       [expr (error 'step-expr "unimplemented expression ~a" expr)])))
 
