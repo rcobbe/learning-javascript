@@ -4,6 +4,14 @@
 
 (define-type Const-Impl ((Listof Value) Store Continuation -> Config))
 
+;; I chose to use an explicit value-configuration value here instead of having
+;; the step function call an apply-continuation helper for two reasons:
+;;   1) This makes it easier to show that we do satisfy the space requirements
+;;      of the tail-call optimization in cases where one value config goes
+;;      directly to another.  (This will be more important in the
+;;      Javascript implementation, of course.)
+;;   2) It allows us to dump value configs as well as expression configs, to
+;;      get a better indication of the history of an evaluation.
 (define-type Config (U expr-config value-config))
 (struct expr-config ([expr : Expr]
                      [ρ : Env]
