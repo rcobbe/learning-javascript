@@ -1,6 +1,7 @@
 #lang typed/racket
 
-(require "types.rkt")
+(require "types.rkt"
+         "utils.rkt")
 
 (define-type Const-Impl ((Listof Value) Store Continuation -> Config))
 
@@ -93,19 +94,3 @@
 (: apply-closure (closure-val (Listof Value) Store Continuation -> Config))
 (define (apply-closure closure arg-vals σ κ)
   (error 'apply-closure "Unimplemented"))
-
-;; Ensures that all symbols in the list are unique; signasl error otherwise.
-(: check-unique! ((Listof Symbol) -> Any))
-(define (check-unique! xs)
-  (foldl (lambda ([x : Symbol] [accum : (Setof Symbol)]) : (Setof Symbol)
-           (if (set-member? accum x)
-               (error 'check-unique "duplicate symbol: ~a" x)
-               (set-add accum x)))
-         ((inst list->seteq Symbol) null)
-         xs))
-
-(: length=? (All (α) (Listof α) Natural -> Boolean))
-(define (length=? xs n)
-  (cond
-   [(zero? n) (null? xs)]
-   [else (and (not (null? xs)) (length=? (cdr xs) (sub1 n)))]))
