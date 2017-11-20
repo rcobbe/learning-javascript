@@ -82,7 +82,7 @@
 
 ;; Extend an environment with a sequence of bindings, shadowing as
 ;; appropriate.  If the same symbol occurs multiple times in the argument, the
-;; binding to the right takes precedence.
+;; binding to the left takes precedence.
 (: extend* ((Listof Symbol) (Listof Addr) Env -> Env))
 (define (extend* xs addrs ρ)
   (unless (same-length? xs addrs)
@@ -157,7 +157,7 @@
   (bind (car symval) (cdr symval) ρ σ))
 
 ;; Binds multiple identifiers to values; returns updated env & store.  If a
-;; symbol appears multiple times, right-hand occurrence. takes precedence.
+;; symbol appears multiple times, left-hand occurrence takes precedence.
 (: bind* ((Listof Symbol) (Listof Value) Env Store -> (Values Env Store)))
 (define (bind* xs vals ρ σ)
   (foldr2 bind/p ρ σ (zip xs vals)))
