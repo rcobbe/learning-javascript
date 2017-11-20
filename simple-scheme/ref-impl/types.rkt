@@ -34,7 +34,8 @@
          Value
          (struct-out pair-val)
          (struct-out const)
-         (struct-out closure-val)
+         (except-out (struct-out closure-val) closure-val-ctor)
+         make-closure-val
          (struct-out continuation-val)
          (struct-out undefined-val)
 
@@ -179,9 +180,16 @@
 (struct const ([name : Symbol]) #:transparent)
 (struct closure-val ([ρ : Env]
                      [formals : (Listof Symbol)]
-                     [body : Expr]) #:transparent)
+                     [body : Expr])
+        #:transparent
+        #:constructor-name closure-val-ctor)
 (struct continuation-val ([κ : Continuation]) #:transparent)
 (struct undefined-val () #:transparent)
+
+(: make-closure-val (Env (Listof Symbol) Expr -> closure-val))
+(define (make-closure-val ρ formals body)
+  (check-unique! formals)
+  (closure-val-ctor ρ formals body))
 
 (define-type Value
   (U Number

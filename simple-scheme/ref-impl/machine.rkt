@@ -47,12 +47,10 @@
       ;; XXX symbol case needs to allow for constant references -- or,
       ;; we prep initial environment.
       [(list 'lambda (list (? symbol? #{xs : (Listof Symbol)}) ...) body)
-       (check-unique! xs)
        (value-config (closure-val ρ xs body) σ κ)]
       [(list 'let (list (list (? symbol? #{xs : (Listof Symbol)})
                               #{rhss : (Listof Expr)}) ...)
              body)
-       (check-unique! xs)
        (expr-config `((lambda ,xs ,body) ,@rhss) ρ σ κ)]
       [(list 'letrec _ ...)
        (error 'step-expr "letrec unimplemented")]
