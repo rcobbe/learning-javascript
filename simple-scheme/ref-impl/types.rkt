@@ -45,6 +45,8 @@
          (struct-out halt-k)
          (struct-out set!-k)
          (struct-out if-k)
+         (struct-out rator-k)
+         (struct-out rand-k)
          )
 
 ;; Represents an address in a Store
@@ -219,11 +221,27 @@
 ;;        | (Expr ...+)
 ;; null, void, call/cc are constants.
 
-(define-type Continuation (U halt-k set!-k if-k))
+(define-type Continuation (U halt-k set!-k if-k rator-k rand-k))
 (struct halt-k () #:transparent)
 (struct set!-k ([a : Addr] [κ : Continuation]) #:transparent)
 (struct if-k ([ρ : Env]
               [consequent : Expr]
               [alternative : Expr]
               [κ : Continuation])
+        #:transparent)
+;; Continuation for evaluating the first subexpression in an application
+(struct rator-k ([ρ : Env]
+                 [rands : (Listof Expr)]
+                 [κ : Continuation])
+        #:transparent)
+;; Continuation for evaluating an argument subexpression in an application
+(struct rand-k ([ρ : Env]
+                ;; closure to which we apply args
+                [closure : closure-val]
+                ;; arg-values contains values of args evaluated so far,
+                ;; in *reverse* order
+                [arg-values : (Listof Value)]
+                ;; argument expressions yet to be evaluated, in source order
+                [remaining-args : (Listof Expr)]
+                [κ : Continuation])
         #:transparent)

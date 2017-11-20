@@ -58,6 +58,8 @@
        (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
       [(list 'if #{e1 : Expr} #{e2 : Expr} #{e3 : Expr})
        (expr-config e1 ρ σ (if-k ρ e2 e3 κ))]
+      [(list #{rator : Expr} #{rands : (Listof Expr)} ...)
+       (expr-config rator ρ σ (rator-k ρ rands κ))]
       [expr (error 'step-expr "unimplemented expression ~a" expr)])))
 
 (: step-value (value-config -> Config))
@@ -68,7 +70,47 @@
      (value-config (void) (update σ addr v) κ)]
     [(value-config test-value σ (if-k ρ e2 e3 κ))
      (expr-config (if test-value e2 e3) ρ σ κ)]
+    [(value-config rator-value σ (rator-k ρ args κ))
+     (step-rator rator-value σ ρ args κ)]
+    [(value-config rand-value σ (rand-k _ clo arg-values (list) κ))
+     (apply-closure clo (reverse (cons rand-value arg-values)) σ κ)]
+    [(value-config rand-value σ (rand-k ρ clo arg-values remaining-args κ))
+     (expr-config (car remaining-args) ρ σ
+                  (rand-k ρ clo
+                          (cons rand-value arg-values)
+                          (cdr remaining-args)
+                          κ))]
     [else (error 'step-value "unknown configuration ~a" config)]))
+
+;; Takes a single step when supplying a value to a `rator-k'.
+(: step-rator (Value Store Env (Listof Expr) Continuation -> Config))
+(define (step-rator rand-val σ ρ args κ)
+  (cond
+   [(not (closure-val? rand-val))
+    (error 'step-rator "Expected closure; got ~a" rand-val)]
+   [(null? args) (apply-closure rand-val args σ κ)]
+   [else (expr-config (car args)
+                      ρ
+                      σ
+                      (rand-k ρ
+                              rand-val
+                              null
+                              (cdr args)
+                              κ))]))
+
+;; Apply a closure to arguments.
+(: apply-closure (closure-val (Listof Value) Store Continuation -> Config))
+(define (apply-closure clo actuals σ κ)
+  (match-let ([(closure-val ρ formals body) clo])
+    (unless (same-length? formals actuals)
+      (let ([num-formals (length formals)])
+        (error 'apply-closure
+               "Closure expected ~a arg~a; got ~a"
+               num-formals
+               (if (= num-formals 1) "" "s")
+               (length actuals))))
+    (let-values ([(new-ρ new-σ) (bind* formals actuals ρ σ)])
+      (expr-config body new-ρ new-σ κ))))
 
 (: call/cc-impl ((Listof Value) Store Continuation -> Config))
 (define (call/cc-impl args σ κ)
@@ -88,7 +130,3 @@
                                [κ : Continuation])
                         (value-config (void) σ κ)))
           (cons 'call/cc call/cc-impl))))
-
-(: apply-closure (closure-val (Listof Value) Store Continuation -> Config))
-(define (apply-closure closure arg-vals σ κ)
-  (error 'apply-closure "Unimplemented"))
