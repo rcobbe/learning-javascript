@@ -45,6 +45,7 @@
          (struct-out halt-k)
          (struct-out set!-k)
          (struct-out if-k)
+         (struct-out begin-k)
          (struct-out rator-k)
          (struct-out rand-k)
          )
@@ -221,13 +222,17 @@
 ;;        | (Expr ...+)
 ;; null, void, call/cc are constants.
 
-(define-type Continuation (U halt-k set!-k if-k rator-k rand-k))
+(define-type Continuation (U halt-k set!-k if-k begin-k rator-k rand-k))
 (struct halt-k () #:transparent)
 (struct set!-k ([a : Addr] [κ : Continuation]) #:transparent)
 (struct if-k ([ρ : Env]
               [consequent : Expr]
               [alternative : Expr]
               [κ : Continuation])
+        #:transparent)
+(struct begin-k ([ρ : Env]
+                 [exprs : (Listof Expr)]
+                 [κ : Continuation])
         #:transparent)
 ;; Continuation for evaluating the first subexpression in an application
 (struct rator-k ([ρ : Env]
