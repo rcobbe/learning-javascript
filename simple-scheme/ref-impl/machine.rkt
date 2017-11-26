@@ -85,10 +85,16 @@
        (expr-config `((lambda ,xs ,body) ,@rhss) ρ σ κ)]
       [(list 'letrec _ ...)
        (error 'step-expr "letrec unimplemented")]
+      [(list 'let/cc _ ...)
+       (error 'step-expr "let/cc unimplemented")]
       [(list 'set! (? symbol? x) rhs)
        (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
       [(list 'if #{e1 : Expr} #{e2 : Expr} #{e3 : Expr})
        (expr-config e1 ρ σ (if-k ρ e2 e3 κ))]
+      [(list 'and _ ...)
+       (error 'step-expr "and unimplemented")]
+      [(list 'or _ ...)
+       (error 'step-expr "or unimplemented")]
       [(list 'begin #{es : (Listof Expr)} ...) (step-begin es ρ σ κ)]
       [(list #{rator : Expr} #{rands : (Listof Expr)} ...)
        (expr-config rator ρ σ (rator-k ρ rands κ))]
