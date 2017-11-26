@@ -13,10 +13,10 @@
 ;; Checks that an expression evaluates to a value that isn't #f
 (define-syntax (check-true stx)
   (syntax-case stx ()
-    [(check-true exp ...)
+    [(check-true exp0 exp ...)
      #`(let ([loc (srcloc (quote #,(syntax-source stx))
                           #,(syntax-line stx))])
-         (let ([val (begin exp ...)])
+         (let ([val (begin exp0 exp ...)])
            (unless val
              (raise
               (exn:failure
@@ -27,10 +27,10 @@
 ;; Checks that an expression evaluates to #f
 (define-syntax (check-false stx)
   (syntax-case stx ()
-    [(check-false exp ...)
+    [(check-false exp0 exp ...)
      #`(let ([loc (srcloc (quote #,(syntax-source stx))
                           #,(syntax-line stx))])
-         (let ([val (begin exp ...)])
+         (let ([val (begin exp0 exp ...)])
            (when val
              (raise
               (exn:failure
@@ -38,7 +38,7 @@
                (current-continuation-marks)
                (failure (format "expected #f; got ~a" val) loc))))))]))
 
-;; Checks that two expressions are equal?
+;; Checks that two expressions are `equal?'
 (define-syntax (check-equal? stx)
   (syntax-case stx ()
     [(check-equal? actual expected)
@@ -57,9 +57,15 @@
                         (pretty-format actual-val))
                 loc))))))]))
 
+;; Checks that an expression throws an exception.  Two forms:
+;;   (check-exn regex body) checks that `body' throws an exn:fail (or
+;;     a subtype) whose message matches `regex'.
+;;   (check-exn predicate body) checks that `body' throws an exception
+;;     and that `predicate' returns a non-#f value when applied to the
+;;     exception.
 (define-syntax (check-exn stx)
   (syntax-case stx ()
-    [(check-exn exn-spec body ...)
+    [(check-exn exn-spec body0 body ...)
      #`(let/cc return : Void
          (let* ([loc (srcloc (quote #,(syntax-source stx))
                              #,(syntax-line stx))]
@@ -74,8 +80,7 @@
                   [else (error 'check-exn
                                "invalid exn spec ~a" exn-spec-value)])])
            (with-handlers ([good-exn? (lambda (e) (return (void)))])
-             (begin
-               body ...))
+             (begin body0 body ...))
            (raise
             (exn:failure
              "check-exn failed"
@@ -89,7 +94,7 @@
 ;; exception.
 (define-syntax (check-no-exn stx)
   (syntax-case stx ()
-    [(check-no-exn body ...)
+    [(check-no-exn body0 body ...)
      #`(let ([loc (srcloc (quote #,(syntax-source stx))
                           #,(syntax-line stx))])
          (with-handlers
@@ -103,8 +108,9 @@
                    (failure
                     (format "uncaught exception:~n~a" (pretty-format e))
                     loc))))])
-           (begin body ... (void))))]))
+           (begin body0 body ...)))]))
 
+;; Generalization of `check-equal?' with a caller-supplied comparison predicate.
 (define-syntax (check-binary-pred stx)
   (syntax-case stx ()
     [(check-binary-pred pred actual expected)
@@ -124,6 +130,8 @@
                       (pretty-format actual-value))
               loc)))))]))
 
+;; Generalization of `check-binary-pred' for an expression that returns
+;; multiple values, with a different predicate for each value.
 (define-syntax (check-values-pred stx)
   (syntax-case stx ()
     [(check-values actual (pred expected) ...)
