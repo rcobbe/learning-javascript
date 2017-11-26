@@ -3,6 +3,10 @@
 (require "types.rkt"
          "utils.rkt")
 
+(provide eval
+         trace
+         step)
+
 (define-type Const-Impl ((Listof Value) Store Continuation -> Config))
 
 ;; I chose to use an explicit value-configuration value here instead of having
@@ -24,10 +28,37 @@
                       [κ : Continuation])
         #:transparent)
 
-;; To simplify step's return type, a value configuration with the `halt'
-;; continuation simply maps to itself; we leave it to the caller to detect
-;; termination.
-(: step (Config -> Config))
+(: config? (Any -> Boolean : Config))
+(define (config? x)
+  (or (expr-config? x) (value-config? x)))
+
+;; Evaluate an expr, in the given initial environment and store, returning a
+;; value.
+(: eval (Expr [#:env Env] [#:store Store] -> Value))
+(define (eval e #:env [ρ empty-env] #:store [σ empty-store])
+  (let loop ([config : Config (expr-config e ρ σ (halt-k))])
+    (let ([next (step config)])
+      (if (config? next)
+          (loop next)
+          next))))
+
+;; Evaluate an expr, in the given initial environment & store, returning the
+;; final value and a list of all states encountered along the way.
+(: trace (Expr [#:env Env] [#:store Store] -> (Values (Listof Config) Value)))
+(define (trace e #:env [ρ empty-env] #:store [σ empty-store])
+  (let ([init-config (expr-config e ρ σ (halt-k))])
+    ;; current-config: machine's current state
+    ;; trace: reversed list of all configs encountered so far, including
+    ;;        current-config
+    (let loop ([current-config : Config init-config]
+               [trace : (Listof Config) (list init-config)])
+      (let ([next (step current-config)])
+        (if (config? next)
+            (loop next (cons next trace))
+            (values (reverse trace) next))))))
+
+;; Takes a single step.
+(: step (Config -> (U Config Value)))
 (define (step config)
   (if (expr-config? config)
       (step-expr config)
@@ -63,10 +94,10 @@
        (expr-config rator ρ σ (rator-k ρ rands κ))]
       [expr (error 'step-expr "unimplemented expression ~a" expr)])))
 
-(: step-value (value-config -> Config))
+(: step-value (value-config -> (U Config Value)))
 (define (step-value config)
   (match config
-    [(value-config v _ (halt-k)) config]
+    [(value-config v _ (halt-k)) v]
     [(value-config v σ (set!-k addr κ))
      (value-config (void) (update σ addr v) κ)]
     [(value-config test-value σ (if-k ρ e2 e3 κ))
