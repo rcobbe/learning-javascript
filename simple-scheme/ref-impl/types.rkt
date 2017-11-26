@@ -39,6 +39,8 @@
          (struct-out continuation-val)
          (struct-out undefined-val)
 
+         Primitive-Function
+
          Expr
 
          Continuation
@@ -194,6 +196,9 @@
   (check-unique! formals)
   (closure-val-ctor ρ formals body))
 
+(define-type Primitive-Function
+  ((Listof Value) Store -> (Values Value Store)))
+
 (define-type Value
   (U Number
      String
@@ -205,7 +210,8 @@
      const
      closure-val
      continuation-val
-     undefined-val))
+     undefined-val
+     Primitive-Function))
 
 (define-type Expr Sexp)
 ;; Expr ::= Number
