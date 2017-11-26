@@ -19,17 +19,18 @@
 ;; run.  In general, the thunk should evaluate one or more checks, but it may
 ;; perform any actions.
 ;;
-;; A check is a single operation that evaluates an expression using the
-;; component being tested.  If the check succeeds, evaluation proceeds to the
-;; rest of the body of the thunk; otherwise, the test case aborts.
+;; To evaluate a test case, the test system evaluates the case's body
+;; expressions, in order.  A test case may have three possible outcomes, not
+;; including divergence:
+;;    1) The test case succeeds: all body expressions produce values.
+;;    2) The test case fails: one of the body expressions raises an exception
+;;       of type exn:failure.  Subsequent expressions are not evaluated.
+;;    3) The test case aborts with an error: one of the body expressions
+;;       raises an exception of any other type.  Subsequent expressions
+;;       are not evaluated.
 ;;
-;; If a test case's thunk returns normally (i.e., without raising an uncaught
-;; exception and without failing a check), then we consider the test to have
-;; succeeded.  Otherwise, it is counted as a failure (failed check) or an error
-;; (uncaught exception).
-;;
-;; If a particular test case aborts, testing continues with the remainder of
-;; the test suite.
+;; If a test case aborts, testing continues with the remainder of the test
+;; suite.
 ;;
 ;; Users should not assume that tests within a suite are evaluated in any
 ;; particular order.
