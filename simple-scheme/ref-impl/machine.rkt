@@ -89,10 +89,10 @@
        (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
       [(list 'if #{e1 : Expr} #{e2 : Expr} #{e3 : Expr})
        (expr-config e1 ρ σ (if-k ρ e2 e3 κ))]
-      [(list 'and _ ...)
-       (error 'step-expr "and unimplemented")]
-      [(list 'or _ ...)
-       (error 'step-expr "or unimplemented")]
+      [(list 'and #{args : (Listof Expr)} ...)
+       (step-and args ρ σ κ)]
+      [(list 'or #{args : (Listof Expr)} ...)
+       (step-or args ρ σ κ)]
       [(list 'begin #{es : (Listof Expr)} ...) (step-begin es ρ σ κ)]
       [(list #{rator : Expr} #{rands : (Listof Expr)} ...)
        (expr-config rator ρ σ (rator-k ρ rands κ))]
@@ -106,6 +106,14 @@
      (value-config (void) (update σ addr v) κ)]
     [(value-config test-value σ (if-k ρ e2 e3 κ))
      (expr-config (if test-value e2 e3) ρ σ κ)]
+    [(value-config v σ (and-k ρ es κ))
+     (if v
+         (expr-config (cons 'and es) ρ σ κ)
+         (value-config v σ κ))]
+    [(value-config v σ (or-k ρ es κ))
+     (if v
+         (value-config v σ κ)
+         (expr-config (cons 'or es) ρ σ κ))]
     [(value-config _ σ (begin-k ρ exprs κ))
      (expr-config (car exprs) ρ σ (begin-k ρ (cdr exprs) κ))]
     [(value-config rator-value σ (rator-k ρ args κ))
@@ -120,6 +128,20 @@
                           (cdr remaining-args)
                           κ))]
     [else (error 'step-value "unknown configuration ~a" config)]))
+
+(: step-and ((Listof Expr) Env Store Continuation -> Config))
+(define (step-and args ρ σ κ)
+  (match args
+    [(list) (value-config #t σ κ)]
+    [(list e) (expr-config e ρ σ κ)]
+    [(list e es ...) (expr-config e ρ σ (and-k ρ es κ))]))
+
+(: step-or ((Listof Expr) Env Store Continuation -> Config))
+(define (step-or args ρ σ κ)
+  (match args
+    [(list) (value-config #f σ κ)]
+    [(list e) (expr-config e ρ σ κ)]
+    [(list e es ...) (expr-config e ρ σ (or-k ρ es κ))]))
 
 ;; Takes a single stop when evaluating a BEGIN expression
 (: step-begin ((Listof Expr) Env Store Continuation -> Config))
