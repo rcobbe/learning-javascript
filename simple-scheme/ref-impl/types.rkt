@@ -9,8 +9,8 @@
 ;; types polymorphic, but the type system doesn't do what I need here; see the
 ;; thread at
 ;; <https://groups.google.com/forum/#!topic/racket-users/Ma9Fh72gfQg>.  In
-;; principle I could move Store out to a separate module, but it doesn't really
-;; seem to be worth it.
+;; principle I could move Store out to a separate module, but it doesn't
+;; really seem to be worth it.
 
 (provide Addr
 
