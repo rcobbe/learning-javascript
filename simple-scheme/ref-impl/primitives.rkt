@@ -102,19 +102,19 @@
            /
            not
            symbol=?)
-         (list cons-impl
+         (list (primitive cons-impl)
                null
-               null?-impl
-               car-impl
-               cdr-impl
-               set-car!-impl
-               set-cdr!-impl
-               =-impl
-               +-impl
-               --impl
-               *-impl
-               /-impl
-               not-impl
-               symbol=?-impl)
+               (primitive null?-impl)
+               (primitive car-impl)
+               (primitive cdr-impl)
+               (primitive set-car!-impl)
+               (primitive set-cdr!-impl)
+               (primitive =-impl)
+               (primitive +-impl)
+               (primitive --impl)
+               (primitive *-impl)
+               (primitive /-impl)
+               (primitive not-impl)
+               (primitive symbol=?-impl))
          empty-env
          empty-store))

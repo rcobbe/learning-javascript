@@ -40,6 +40,9 @@
          (struct-out undefined-val)
 
          Primitive-Function
+         (struct-out primitive)
+         Function
+         function?
 
          Expr
 
@@ -198,6 +201,15 @@
 
 (define-type Primitive-Function
   ((Listof Value) Store -> (Values Value Store)))
+(struct primitive ([func : Primitive-Function]))
+(define-type Function (U closure-val primitive))
+
+;; Recognize (approximation to) set of Function values.  We could check the
+;; arity of a procedure argument, but that's so inexact that it doesn't seem
+;; worth it.
+(: function? (Any -> Boolean : Function))
+(define (function? x)
+  (or (closure-val? x) (primitive? x)))
 
 (define-type Value
   (U Number
@@ -209,9 +221,9 @@
      pair-val
      const
      closure-val
+     primitive
      continuation-val
-     undefined-val
-     Primitive-Function))
+     undefined-val))
 
 (define-type Expr Sexp)
 ;; Expr ::= Number
@@ -250,8 +262,8 @@
         #:transparent)
 ;; Continuation for evaluating an argument subexpression in an application
 (struct rand-k ([ρ : Env]
-                ;; closure to which we apply args
-                [closure : closure-val]
+                ;; function to which we apply args
+                [func : Function]
                 ;; arg-values contains values of args evaluated so far,
                 ;; in *reverse* order
                 [arg-values : (Listof Value)]

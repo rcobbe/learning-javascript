@@ -110,11 +110,12 @@
      (expr-config (car exprs) ρ σ (begin-k ρ (cdr exprs) κ))]
     [(value-config rator-value σ (rator-k ρ args κ))
      (step-rator rator-value σ ρ args κ)]
-    [(value-config rand-value σ (rand-k _ clo arg-values (list) κ))
-     (apply-closure clo (reverse (cons rand-value arg-values)) σ κ)]
-    [(value-config rand-value σ (rand-k ρ clo arg-values remaining-args κ))
+    [(value-config rand-value σ (rand-k _ func arg-values (list) κ))
+     (apply-function func (reverse (cons rand-value arg-values)) σ κ)]
+    [(value-config rand-value σ (rand-k ρ func arg-values remaining-args κ))
      (expr-config (car remaining-args) ρ σ
-                  (rand-k ρ clo
+                  (rand-k ρ
+                          func
                           (cons rand-value arg-values)
                           (cdr remaining-args)
                           κ))]
@@ -132,9 +133,9 @@
 (: step-rator (Value Store Env (Listof Expr) Continuation -> Config))
 (define (step-rator rand-val σ ρ args κ)
   (cond
-   [(not (closure-val? rand-val))
-    (error 'step-rator "Expected closure; got ~a" rand-val)]
-   [(null? args) (apply-closure rand-val args σ κ)]
+   [(not (function? rand-val))
+    (error 'step-rator "expected function; got ~a" rand-val)]
+   [(null? args) (apply-function rand-val args σ κ)]
    [else (expr-config (car args)
                       ρ
                       σ
@@ -144,35 +145,23 @@
                               (cdr args)
                               κ))]))
 
-;; Apply a closure to arguments.
-(: apply-closure (closure-val (Listof Value) Store Continuation -> Config))
-(define (apply-closure clo actuals σ κ)
-  (match-let ([(closure-val ρ formals body) clo])
-    (unless (same-length? formals actuals)
-      (let ([num-formals (length formals)])
-        (error 'apply-closure
-               "Closure expected ~a arg~a; got ~a"
-               num-formals
-               (if (= num-formals 1) "" "s")
-               (length actuals))))
-    (let-values ([(new-ρ new-σ) (bind* formals actuals ρ σ)])
-      (expr-config body new-ρ new-σ κ))))
-
-(: call/cc-impl ((Listof Value) Store Continuation -> Config))
-(define (call/cc-impl args σ κ)
-  (match args
-    [(list (? closure-val? closure))
-     (apply-closure closure (list (continuation-val κ)) σ κ)]
-    [else
-     (error 'call/cc-impl "expected 1 arg, a closure; got ~a" args)]))
-
-(: constants (Immutable-HashTable Symbol (U Value Const-Impl)))
-;; XXX probably want to make all constants Const-Impls
-(define constants
-  ((inst make-immutable-hasheq Symbol (U Value Const-Impl))
-    (list (cons 'null null)
-          (cons 'void (lambda ([args : (Listof Value)]
-                               [σ : Store]
-                               [κ : Continuation])
-                        (value-config (void) σ κ)))
-          (cons 'call/cc call/cc-impl))))
+;; Apply a function to arguments.
+(: apply-function (Function (Listof Value) Store Continuation -> Config))
+(define (apply-function func actuals σ κ)
+  (match func
+    [(closure-val ρ formals body)
+     (unless (same-length? formals actuals)
+       (let ([num-formals (length formals)])
+         (error 'apply-function
+                "Function expected ~a arg~a; got ~a"
+                num-formals
+                (if (= num-formals 1) "" "s")
+                (length actuals))))
+     (let-values ([(new-ρ new-σ) (bind* formals actuals ρ σ)])
+       (expr-config body new-ρ new-σ κ))]
+    [(primitive prim-func)
+     (let-values ([(result new-σ) (prim-func actuals σ)])
+       (value-config result new-σ κ))]
+    [else (error 'apply-function
+                 "expected function; got ~a"
+                 func)]))
