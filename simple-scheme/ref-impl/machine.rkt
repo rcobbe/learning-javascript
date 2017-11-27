@@ -83,8 +83,8 @@
        (expr-config `((lambda ,xs ,body) ,@rhss) ρ σ κ)]
       [(list 'letrec _ ...)
        (error 'step-expr "letrec unimplemented")]
-      [(list 'let/cc _ ...)
-       (error 'step-expr "let/cc unimplemented")]
+      [(list 'let/cc (? symbol? x) body)
+       (step-let/cc x body ρ σ κ)]
       [(list 'set! (? symbol? x) rhs)
        (expr-config rhs ρ σ (set!-k (lookup ρ x) κ))]
       [(list 'if #{e1 : Expr} #{e2 : Expr} #{e3 : Expr})
@@ -128,6 +128,11 @@
                           (cdr remaining-args)
                           κ))]
     [else (error 'step-value "unknown configuration ~a" config)]))
+
+(: step-let/cc (Symbol Expr Env Store Continuation -> Config))
+(define (step-let/cc x body ρ σ κ)
+  (let-values ([(new-ρ new-σ) (bind x (continuation-val κ) ρ σ)])
+    (expr-config body new-ρ new-σ κ)))
 
 (: step-and ((Listof Expr) Env Store Continuation -> Config))
 (define (step-and args ρ σ κ)

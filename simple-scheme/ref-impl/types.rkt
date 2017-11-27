@@ -236,7 +236,7 @@
 ;;        | (lambda (Symbol ...) Expr)
 ;;        | (let ([Symbol Expr] ...) Expr)
 ;;        | (letrec ([Symbol Expr] ...) Expr)
-;;        | (let/cc Symbol Expr ...)
+;;        | (let/cc Symbol Expr)
 ;;        | (set! Symbol Expr)
 ;;        | (if Expr Expr Expr)
 ;;        | (and Expr ...)
