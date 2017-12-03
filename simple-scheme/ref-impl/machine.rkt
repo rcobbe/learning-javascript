@@ -1,7 +1,8 @@
 #lang typed/racket
 
 (require "types.rkt"
-         "utils.rkt")
+         "utils.rkt"
+         "primitives.rkt")
 
 (provide eval
          trace
@@ -35,7 +36,7 @@
 ;; Evaluate an expr, in the given initial environment and store, returning a
 ;; value.
 (: eval (Expr [#:env Env] [#:store Store] -> Value))
-(define (eval e #:env [ρ empty-env] #:store [σ empty-store])
+(define (eval e #:env [ρ prim-env] #:store [σ prim-store])
   (let loop ([config : Config (expr-config e ρ σ (halt-k))])
     (let ([next (step config)])
       (if (config? next)
@@ -45,7 +46,7 @@
 ;; Evaluate an expr, in the given initial environment & store, returning the
 ;; final value and a list of all states encountered along the way.
 (: trace (Expr [#:env Env] [#:store Store] -> (Values (Listof Config) Value)))
-(define (trace e #:env [ρ empty-env] #:store [σ empty-store])
+(define (trace e #:env [ρ prim-env] #:store [σ prim-store])
   (let ([init-config (expr-config e ρ σ (halt-k))])
     ;; current-config: machine's current state
     ;; trace: reversed list of all configs encountered so far, including
