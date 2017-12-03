@@ -5,6 +5,13 @@
 (provide prim-env
          prim-store)
 
+;; primitives raise an exn:fail on error; it is the caller's responsibility
+;; to catch this and produce an error config.  Generating an error config
+;; directly from these functions would require putting everything into the same
+;; module: the definition of Primitive-Function (in types.rkt, because the
+;; Value type refers to it) would have to include Config, defined in
+;; machine.rkt.
+
 (: cons-impl Primitive-Function)
 (define (cons-impl args σ)
   (match args

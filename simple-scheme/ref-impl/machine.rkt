@@ -18,7 +18,10 @@
 ;;      Javascript implementation, of course.)
 ;;   2) It allows us to dump value configs as well as expression configs, to
 ;;      get a better indication of the history of an evaluation.
-(define-type Config (U expr-config value-config))
+;;
+;; Use an explicit error config, rather than just calling error, so we can
+;; generate a useful trace.
+(define-type Config (U expr-config value-config error-config))
 (struct expr-config ([expr : Expr]
                      [ρ : Env]
                      [σ : Store]
@@ -28,24 +31,30 @@
                       [σ : Store]
                       [κ : Continuation])
         #:transparent)
+(struct error-config ([msg : String]) #:transparent)
 
 (: config? (Any -> Boolean : Config))
 (define (config? x)
+  (or (expr-config? x) (value-config? x) (error-config? x)))
+
+(: steppable? (Any -> Boolean : (U expr-config value-config)))
+(define (steppable? x)
   (or (expr-config? x) (value-config? x)))
 
 ;; Evaluate an expr, in the given initial environment and store, returning a
 ;; value.
-(: eval (Expr [#:env Env] [#:store Store] -> Value))
+(: eval (Expr [#:env Env] [#:store Store] -> (U Value error-config)))
 (define (eval e #:env [ρ prim-env] #:store [σ prim-store])
   (let loop ([config : Config (expr-config e ρ σ (halt-k))])
     (let ([next (step config)])
-      (if (config? next)
+      (if (steppable? next)
           (loop next)
           next))))
 
 ;; Evaluate an expr, in the given initial environment & store, returning the
 ;; final value and a list of all states encountered along the way.
-(: trace (Expr [#:env Env] [#:store Store] -> (Values (Listof Config) Value)))
+(: trace (Expr [#:env Env] [#:store Store] ->
+               (Values (Listof Config) (U Value error-config))))
 (define (trace e #:env [ρ prim-env] #:store [σ prim-store])
   (let ([init-config (expr-config e ρ σ (halt-k))])
     ;; current-config: machine's current state
@@ -54,16 +63,17 @@
     (let loop ([current-config : Config init-config]
                [trace : (Listof Config) (list init-config)])
       (let ([next (step current-config)])
-        (if (config? next)
+        (if (steppable? next)
             (loop next (cons next trace))
             (values (reverse trace) next))))))
 
 ;; Takes a single step.
 (: step (Config -> (U Config Value)))
 (define (step config)
-  (if (expr-config? config)
-      (step-expr config)
-      (step-value config)))
+  (cond
+   [(expr-config? config) (step-expr config)]
+   [(value-config? config) (step-value config)]
+   [(error-config? config) config]))
 
 (: step-expr (expr-config -> Config))
 (define (step-expr config)
@@ -77,7 +87,11 @@
       [(? boolean? b) (value-config b σ κ)]
       [(? symbol? x) (value-config (deref σ (lookup ρ x)) σ κ)]
       [(list 'lambda (list (? symbol? #{xs : (Listof Symbol)}) ...) body)
-       (value-config (closure-val ρ xs body) σ κ)]
+       (cond
+        [(find-dups xs) =>
+         (lambda (x)
+           (error-config (format "lambda: duplicate formal param: ~a" x)))]
+        [else (value-config (closure-val ρ xs body) σ κ)])]
       [(list 'let (list (list (? symbol? #{xs : (Listof Symbol)})
                               #{rhss : (Listof Expr)}) ...)
              body)
@@ -99,7 +113,10 @@
       [(list 'begin #{es : (Listof Expr)} ...) (step-begin es ρ σ κ)]
       [(list #{rator : Expr} #{rands : (Listof Expr)} ...)
        (expr-config rator ρ σ (rator-k ρ rands κ))]
-      [expr (error 'step-expr "unimplemented expression ~a" expr)])))
+      [else
+       (error-config
+        (format "step-expr: unimplemented expression ~a"
+                (expr-config-expr config)))])))
 
 (: step-value (value-config -> (U Config Value)))
 (define (step-value config)
@@ -136,21 +153,24 @@
                           (cons rand-value arg-values)
                           (cdr remaining-args)
                           κ))]
-    [else (error 'step-value "unknown configuration ~a" config)]))
+    [else
+     (error-config (format "step-value: unknown configuration ~a" config))]))
 
 (: step-letrec ((Listof Symbol) (Listof Expr) Expr Env Store Continuation
                 -> Config))
 (define (step-letrec xs rhss body ρ σ κ)
-  (if (null? xs)
-      (expr-config body ρ σ κ)
-      (begin
-        (check-unique! xs)
-        (let-values ([(new-ρ new-σ)
-                      (bind* xs (map (lambda (_) (undefined-val)) xs) ρ σ)])
-          (expr-config (car rhss)
-                       new-ρ
-                       new-σ
-                       (letrec-k new-ρ (car xs) (cdr xs) (cdr rhss) body κ))))))
+  (cond
+   [(null? xs) (expr-config body ρ σ κ)]
+   [(find-dups xs) => (lambda ([x : Symbol])
+                        (error-config
+                         (format "letrec: duplicate binding id: ~a" x)))]
+   [else
+    (let-values ([(new-ρ new-σ)
+                  (bind* xs (map (lambda (_) (undefined-val)) xs) ρ σ)])
+      (expr-config (car rhss)
+                   new-ρ
+                   new-σ
+                   (letrec-k new-ρ (car xs) (cdr xs) (cdr rhss) body κ)))]))
 
 (: step-let/cc (Symbol Expr Env Store Continuation -> Config))
 (define (step-let/cc x body ρ σ κ)
@@ -184,7 +204,7 @@
 (define (step-rator rand-val σ ρ args κ)
   (cond
    [(not (function? rand-val))
-    (error 'step-rator "expected function; got ~a" rand-val)]
+    (error-config (format "step-rator: expected function, got ~a" rand-val))]
    [(null? args) (apply-function rand-val args σ κ)]
    [else (expr-config (car args)
                       ρ
@@ -202,16 +222,30 @@
     [(closure-val ρ formals body)
      (unless (same-length? formals actuals)
        (let ([num-formals (length formals)])
-         (error 'apply-function
-                "Function expected ~a arg~a; got ~a"
-                num-formals
-                (if (= num-formals 1) "" "s")
-                (length actuals))))
+         (error-config
+          (format "apply-function: expected ~a arg~a; got ~a"
+                  num-formals
+                  (if (= num-formals 1) "" "s")
+                  (length actuals)))))
      (let-values ([(new-ρ new-σ) (bind* formals actuals ρ σ)])
        (expr-config body new-ρ new-σ κ))]
     [(primitive prim-func)
-     (let-values ([(result new-σ) (prim-func actuals σ)])
-       (value-config result new-σ κ))]
-    [else (error 'apply-function
-                 "expected function; got ~a"
-                 func)]))
+     (with-handlers ([exn:fail? exn-to-error-config])
+       (let-values ([(result new-σ) (prim-func actuals σ)])
+         (value-config result new-σ κ)))]
+    [else (error-config
+           (format "apply-function: expected function; got ~a" func))]))
+
+(: exn-to-error-config (exn:fail -> error-config))
+(define (exn-to-error-config e)
+  (error-config (exn-message e)))
+
+;; Returns a symbol that occurs multiple times in the list; #f if no duplicates
+(: find-dups ((Listof Symbol) -> (Option Symbol)))
+(define (find-dups xs)
+  (let loop ([xs : (Listof Symbol) xs]
+             [accum : (Setof Symbol) ((inst list->seteq Symbol) null)])
+    (cond
+     [(null? xs) #f]
+     [(set-member? accum (car xs)) (car xs)]
+     [else (loop (cdr xs) (set-add accum (car xs)))])))
