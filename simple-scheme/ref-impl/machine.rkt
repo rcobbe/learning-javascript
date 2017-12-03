@@ -150,7 +150,7 @@
           (expr-config (car rhss)
                        new-ρ
                        new-σ
-                       (letrec-k ρ (car xs) (cdr xs) (cdr rhss) body κ))))))
+                       (letrec-k new-ρ (car xs) (cdr xs) (cdr rhss) body κ))))))
 
 (: step-let/cc (Symbol Expr Env Store Continuation -> Config))
 (define (step-let/cc x body ρ σ κ)
