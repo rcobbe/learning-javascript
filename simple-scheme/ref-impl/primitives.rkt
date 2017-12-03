@@ -63,17 +63,18 @@
 ;; let/cc instead.
 
 (: make-binary-numeric-primitive
-   (Symbol (-> Number Number Value) -> Primitive-Function))
+   (Symbol (-> Real Real Value) -> Primitive-Function))
 (define ((make-binary-numeric-primitive op-name op) args σ)
-  (if (andmap number? args)
-      (values (op (car args) (cadr args)) σ)
-      (error op-name "Expected numbers; got ~a" args)))
+  (match args
+    [(list (? real? left) (? real? right))
+     (values (op left right) σ)]
+    [else (error op-name "Expected 2 numbers; got ~a" args)]))
 
 (define =-impl (make-binary-numeric-primitive '= =))
 (define <-impl (make-binary-numeric-primitive '< <))
-(define <=-impl (make-binary-numeric-primitive '<= <-))
+(define <=-impl (make-binary-numeric-primitive '<= <=))
 (define >-impl (make-binary-numeric-primitive '> >))
-(define >=-impl (make-binary-numeric-primitive '> >=))
+(define >=-impl (make-binary-numeric-primitive '>= >=))
 (define +-impl (make-binary-numeric-primitive '+ +))
 (define --impl (make-binary-numeric-primitive '- -))
 (define *-impl (make-binary-numeric-primitive '* *))
@@ -100,6 +101,10 @@
            set-car!
            set-cdr!
            =
+           <
+           <=
+           >
+           >=
            +
            -
            *
@@ -114,6 +119,10 @@
                (primitive set-car!-impl)
                (primitive set-cdr!-impl)
                (primitive =-impl)
+               (primitive <-impl)
+               (primitive <=-impl)
+               (primitive >-impl)
+               (primitive >=-impl)
                (primitive +-impl)
                (primitive --impl)
                (primitive *-impl)
