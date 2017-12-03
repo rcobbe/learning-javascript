@@ -70,7 +70,7 @@
         [σ (expr-config-σ config)]
         [κ (expr-config-κ config)])
     (match (expr-config-expr config)
-      [(? number? n) (value-config n σ κ)]
+      [(? real? n) (value-config n σ κ)]
       [(? string? s) (value-config s σ κ)]
       [(list 'quote (? symbol? s)) (value-config s σ κ)]
       [(? boolean? b) (value-config b σ κ)]

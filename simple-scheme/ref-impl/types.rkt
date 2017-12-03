@@ -221,7 +221,7 @@
   (or (closure-val? x) (primitive? x)))
 
 (define-type Value
-  (U Number
+  (U Real
      String
      Symbol
      Null
@@ -235,7 +235,7 @@
      undefined-val))
 
 (define-type Expr Sexp)
-;; Expr ::= Number
+;; Expr ::= Real
 ;;        | String
 ;;        | (quote Symbol)
 ;;        | Boolean
