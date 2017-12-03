@@ -70,6 +70,10 @@
       (error op-name "Expected numbers; got ~a" args)))
 
 (define =-impl (make-binary-numeric-primitive '= =))
+(define <-impl (make-binary-numeric-primitive '< <))
+(define <=-impl (make-binary-numeric-primitive '<= <-))
+(define >-impl (make-binary-numeric-primitive '> >))
+(define >=-impl (make-binary-numeric-primitive '> >=))
 (define +-impl (make-binary-numeric-primitive '+ +))
 (define --impl (make-binary-numeric-primitive '- -))
 (define *-impl (make-binary-numeric-primitive '* *))
