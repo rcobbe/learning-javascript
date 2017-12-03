@@ -30,6 +30,7 @@
 
          bind
          bind*
+         update-id
 
          Value
          (struct-out pair-val)
@@ -179,6 +180,11 @@
    [(and (null? xs) (null? ys)) null]
    [(or (null? xs) (null? ys)) (error 'zip "lists of different length")]
    [else (cons (cons (car xs) (car ys)) (zip (cdr xs) (cdr ys)))]))
+
+;; Updates the value bound to an identifier
+(: update-id (Symbol Value Env Store -> Store))
+(define (update-id x val ρ σ)
+  (update σ (lookup ρ x) val))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
