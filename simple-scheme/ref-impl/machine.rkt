@@ -81,8 +81,10 @@
                               #{rhss : (Listof Expr)}) ...)
              body)
        (expr-config `((lambda ,xs ,body) ,@rhss) ρ σ κ)]
-      [(list 'letrec _ ...)
-       (error 'step-expr "letrec unimplemented")]
+      [(list 'letrec (list (list (? symbol? #{xs : (Listof Symbol)})
+                                 #{rhss : (Listof Expr)}) ...)
+             #{body : Expr})
+       (step-letrec xs rhss body ρ σ κ)]
       [(list 'let/cc (? symbol? x) body)
        (step-let/cc x body ρ σ κ)]
       [(list 'set! (? symbol? x) rhs)
@@ -102,6 +104,12 @@
 (define (step-value config)
   (match config
     [(value-config v _ (halt-k)) v]
+    [(value-config v σ (letrec-k ρ x xs rhss body κ))
+     (let ([new-σ (update-id x v ρ σ)])
+       (if (null? xs)
+           (expr-config body ρ new-σ κ)
+           (expr-config (car rhss) ρ new-σ
+                        (letrec-k ρ (car xs) (cdr xs) (cdr rhss) body κ))))]
     [(value-config v σ (set!-k addr κ))
      (value-config (void) (update σ addr v) κ)]
     [(value-config test-value σ (if-k ρ e2 e3 κ))
@@ -128,6 +136,20 @@
                           (cdr remaining-args)
                           κ))]
     [else (error 'step-value "unknown configuration ~a" config)]))
+
+(: step-letrec ((Listof Symbol) (Listof Expr) Expr Env Store Continuation
+                -> Config))
+(define (step-letrec xs rhss body ρ σ κ)
+  (if (null? xs)
+      (expr-config body ρ σ κ)
+      (begin
+        (check-unique! xs)
+        (let-values ([(new-ρ new-σ)
+                      (bind* xs (map (lambda (_) (undefined-val)) xs) ρ σ)])
+          (expr-config (car rhss)
+                       new-ρ
+                       new-σ
+                       (letrec-k ρ (car xs) (cdr xs) (cdr rhss) body κ))))))
 
 (: step-let/cc (Symbol Expr Env Store Continuation -> Config))
 (define (step-let/cc x body ρ σ κ)

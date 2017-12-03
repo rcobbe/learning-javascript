@@ -49,6 +49,7 @@
 
          Continuation
          (struct-out halt-k)
+         (struct-out letrec-k)
          (struct-out set!-k)
          (struct-out if-k)
          (struct-out and-k)
@@ -252,6 +253,7 @@
 ;; null, void, call/cc are constants.
 
 (define-type Continuation (U halt-k
+                             letrec-k
                              set!-k
                              if-k
                              and-k
@@ -260,6 +262,16 @@
                              rator-k
                              rand-k))
 (struct halt-k () #:transparent)
+(struct letrec-k ([ρ : Env]
+                  ;; symbol whose initializer we're currently evaluating
+                  [x : Symbol]
+                  ;; remaining symbols
+                  [xs : (Listof Symbol)]
+                  ;; remaining right-hand sides
+                  [rhss : (Listof Expr)]
+                  [body : Expr]
+                  [κ : Continuation])
+        #:transparent)
 (struct set!-k ([a : Addr] [κ : Continuation]) #:transparent)
 (struct if-k ([ρ : Env]
               [consequent : Expr]
