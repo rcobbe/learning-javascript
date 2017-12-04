@@ -150,7 +150,7 @@
 (define (update σ a v)
   (let ([t (store-values σ)])
     (if (hash-has-key? t a)
-        (struct-copy store [values (hash-set t a v)])
+        (struct-copy store σ [values (hash-set t a v)])
         (error 'update "Bad address ~a" a))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
