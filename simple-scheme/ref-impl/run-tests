@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $verbose = '';
+my $path = '';
+
+if (scalar(@ARGV) > 0 && $ARGV[0] eq '--verbose') {
+    $verbose = '#:verbose #t';
+    shift(@ARGV);
+}
+
+if (scalar(@ARGV) > 0) {
+    $path = "#:path '(" . join(' ', @ARGV) . ")";
+}
+
+sys('raco', 'make', '-v', 'run-tests.rkt');
+sys('racket', '-t', 'run-tests.rkt', '-e', "(run $verbose $path)");
+
+sub sys {
+    my @args = @_;
+    system(@args);
+    if ($? == -1) {
+        die "system @args failed to execute $!\n";
+    } elsif ($? & 127) {
+        my $signal = $? & 127;
+        my $coredump = (($? & 128) ? 'with' : 'without') . ' coredump';
+        die "command @args died with signal $signal, $coredump\n";
+    } elsif ($? != 0) {
+        my $value = $? >> 8;
+        die "command @args exited with value $value\n"
+    }
+}
