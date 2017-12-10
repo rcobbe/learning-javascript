@@ -1,18 +1,28 @@
 "use strict";
 
+import { show } from "./show.mjs";
+
 var _tag = Symbol("tag");
 var _car = Symbol("car");
 var _cdr = Symbol("cdr");
 var emptyListTag = Symbol("emptyListTag");
 var listTag = Symbol("listTag");
 
-export var empty = { [_tag]: emptyListTag };
+export var empty = {
+    [_tag]: emptyListTag,
+    show: function show() { return '[]'; }
+};
 
 export function isList(x) { return (x[_tag] === listTag || isEmpty(x)); }
 export function isEmpty(x) { return (x[_tag] === emptyListTag); }
 export function cons(x, y) {
     console.assert(isList(y));
-    return { [_tag]: listTag, [_car]: x, [_cdr]: y };
+    return {
+        [_tag]: listTag,
+        [_car]: x,
+        [_cdr]: y,
+        show: function s() { return '[' + showElements(this) + ']'; }
+    };
 }
 export function car(x) {
     console.assert(isList(x));
@@ -64,20 +74,11 @@ export function map(f, list) {
     );
 }
 
-export function show(list) {
-    console.assert(isList(list));
-    if (isEmpty(list)) {
-        return '[]';
-    } else {
-        return '[' + showElements(list) + ']';
-    }
-}
-
 function showElements(list) {
     console.assert(isList(list) && !(isEmpty(list)));
     if (isEmpty(cdr(list))) {
-        return '' + car(list);
+        return '' + show(car(list));
     } else {
-        return '' + car(list) + ', ' + showElements(cdr(list));
+        return '' + show(car(list)) + ', ' + showElements(cdr(list));
     }
 }
