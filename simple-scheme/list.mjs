@@ -13,8 +13,14 @@ export var empty = {
     show: function show() { return '[]'; }
 };
 
-export function isList(x) { return (x[_tag] === listTag || isEmpty(x)); }
-export function isEmpty(x) { return (x[_tag] === emptyListTag); }
+export function isList(x) {
+    return x.hasOwnProperty(_tag) &&
+        (x[_tag] === listTag || x[_tag] === emptyListTag);
+}
+export function isEmpty(x) {
+    console.assert(isList(x));
+    return (x[_tag] === emptyListTag);
+}
 export function cons(x, y) {
     console.assert(isList(y));
     return {
@@ -82,3 +88,5 @@ function showElements(list) {
         return '' + show(car(list)) + ', ' + showElements(cdr(list));
     }
 }
+
+// XXX add Iterable
