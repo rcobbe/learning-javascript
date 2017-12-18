@@ -5,7 +5,7 @@
 //   {value_tag: 'str-lit', val: string}
 //   {value_tag: 'bool-lit', val: boolean}
 //   {value_tag: 'symbol', val: string}
-//   {value_tag: 'empty-list'}
+//   {value_tag: 'null'}
 //   {value_tag: 'void'}
 //   {value_tag: 'pair', car: Addr, cdr: Addr}
 //   {value_tag: 'closure', rho: Env, formals: [str, ...], body: Expr}
