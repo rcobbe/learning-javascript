@@ -6,6 +6,12 @@ import * as store from './store.mjs';
 var _tag = Symbol("_tag");
 var _bindings = Symbol("_bindings");
 
+export function isEnv(x) {
+    return (x.hasOwnProperty(_tag));
+}
+
+// XXX lookup should throw error if not found, rather than returning
+// undefined, for better expression composition.
 function mkEnv(bindings) {
     console.assert(map.isMap(bindings));
     return {
