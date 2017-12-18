@@ -42,8 +42,8 @@ function mkStore(nextAddr, memory) {
         alloc: function alloc(v) {
             let addr = this[_nextAddr];
             return {
-                first: addr,
-                second: mkStore(addr.inc(), memory.extend(addr, v))
+                addr: addr,
+                store: mkStore(addr.inc(), memory.extend(addr, v))
             }
         },
 
