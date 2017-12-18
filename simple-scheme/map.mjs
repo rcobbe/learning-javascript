@@ -21,6 +21,7 @@ export var empty = {
     [_tag]: _tag,  // value isn't important; we only check for existence
                    // of the field
     extend: function extend(k, v) { return extendImpl(k, v, this); },
+    hasKey: function hasKey(k) { return false; }
     lookup: function lookup(k) { return undefined; },
     show: function show() { return "Map()"; },
     [_showElements]: function showElements() { return ''; }
@@ -44,6 +45,9 @@ function extendImpl(k, v, map) {
         [_val]: v,
         [_next]: map,
         extend: function extend(k, v) { return extendImpl(k, v, this); },
+        hasKey: function hasKey(k) {
+            return k === this[_key] || this[_next].hasKey(k);
+        }
         lookup: function lookup(k) {
             if (this[_key] === k) {
                 return this[_val];
