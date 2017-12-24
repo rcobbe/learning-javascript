@@ -117,7 +117,7 @@ function mkIf_k(rho, thenExpr, elseExpr, k) {
         [_continuationTag]: 'if',
         apply: function apply(val, st) {
             return mkExprConfig(
-                (Value.isBool(val) && !(val.val)) ? elseExpr : thenExpr,
+                isTrue(val) ? elseExpr : thenExpr,
                 rho,
                 st,
                 k
@@ -130,11 +130,54 @@ function mkIf_k(rho, thenExpr, elseExpr, k) {
     }
 }
 
+function mkAnd_k(rho, restArgs, k) {
+    return {
+        [_continuationTag]: 'and',
+        apply: function apply(val, st) {
+            if (isTrue(val)) {
+                return mkExprConfig(Expr.mkAnd(restArgs), rho, st, k);
+            } else {
+                return mkValueConfig(val, st, k);
+            }
+        }
+        show: function show() {
+            return 'and_k(' + show(rho) +
+                ', ' + show(restArgs) +
+                ', ' + show(k) +
+                ')';
+        }
+    };
+}
+
+function mkOr_k(rho, restArgs, k) {
+    return {
+        [_continuationTag]: 'or',
+        apply: function apply(val, st) {
+            if (isTrue(val)) {
+                return mkValueConfig(val, st, k);
+            } else {
+                return mkExprConfig(Expr.mkOr(restArgs), rho, st, k);
+            }
+        },
+        show: function show() {
+            return 'or_k(' + show(rho) +
+                ', ' + show(restArgs) +
+                ', ' + show(k) +
+                ')';
+        }
+    };
+}
+
 /**********************************************************************
  *
  * misc
  *
  **********************************************************************/
+
+// Recognize any Scheme value that counts as true
+function isTrue(v) {
+    return !(Value.isBool(val) && !(val.val));
+}
 
 function updateID(sym, val, env, store) {
     return store.update(env.lookup(sym), val);
